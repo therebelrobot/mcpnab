@@ -353,6 +353,32 @@ Everything persistent lives in **one mounted directory**, `/app/data`:
 the image seeds `data/config.json` from a built-in default; edit that file (see
 `config.example.json` for MCP backends) and restart.
 
+### Matching host file ownership (PUID/PGID)
+
+The container starts as `root`, then drops to the `node` user (uid/gid `1000`)
+before running the app. If your bind-mounted `./data` or `./downloads` are
+owned by a different uid/gid on the host, set `PUID`/`PGID` to match — the
+entrypoint remaps the `node` user to that uid/gid before chowning the mounted
+directories, so writes from inside the container land with the right owner on
+the host:
+
+```yaml
+environment:
+  - PUID=1000   # id -u on the host
+  - PGID=1000   # id -g on the host
+```
+
+### Timezone (TZ)
+
+The base image ships `tzdata`, so `TZ` (e.g. `America/New_York`) works out of
+the box — no rebuild needed. It affects log timestamps and anything in the app
+or MCP backends that reads local time:
+
+```yaml
+environment:
+  - TZ=America/New_York
+```
+
 ### MCP transports inside the container
 
 All three transport styles work in the image:
@@ -419,6 +445,10 @@ services:
     image: ghcr.io/therebelrobot/mcpnab:latest    # or build: .
     ports:
       - "8080:8080"                     # Newznab + SABnzbd + web UI
+    environment:
+      - PUID=1000                       # match host uid, avoids write errors
+      - PGID=1000                       # match host gid
+      - TZ=America/New_York             # log timestamps, local-time scheduling
     volumes:
       - ./mcpnab-data:/app/data           # config.json, mcpnab.db, npx/uvx caches
       - downloads:/downloads            # MUST be shared with R_____r, same path
