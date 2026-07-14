@@ -50,11 +50,12 @@ function rfc822(iso?: string): string {
 }
 
 function itemXml(item: SearchItem, backend: string, cfg: AppConfig): string {
+  const displayTitle = `${item.title}${item.author ? ` (${item.author})` : ""}${item.extension ? ` [${item.extension.toUpperCase()}]` : ""}`;
   const token = encodeToken(
     {
       backend,
       fetchRef: item.fetchRef,
-      title: item.title,
+      title: displayTitle,
       sizeBytes: item.sizeBytes,
       extension: item.extension,
     },
@@ -62,7 +63,6 @@ function itemXml(item: SearchItem, backend: string, cfg: AppConfig): string {
   );
   const dl = `${cfg.server.baseUrl.replace(/\/$/, "")}/dl/${encodeURIComponent(backend)}/${token}`;
   const size = item.sizeBytes || 0;
-  const displayTitle = `${item.title}${item.author ? ` (${item.author})` : ""}${item.extension ? ` [${item.extension.toUpperCase()}]` : ""}`;
   const cats = item.categories.length ? item.categories : [7020];
 
   const attrs = [
