@@ -416,7 +416,7 @@ the spawned servers; per-backend `mcp.env` in config overrides them.
 ```yaml
 services:
   mcpnab:
-    image: mcpnab:latest      # or build: .
+    image: ghcr.io/therebelrobot/mcpnab:latest    # or build: .
     ports:
       - "8080:8080"                     # Newznab + SABnzbd + web UI
     volumes:
