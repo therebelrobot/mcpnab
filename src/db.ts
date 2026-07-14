@@ -7,6 +7,10 @@ export interface JobRow {
   backend: string;
   fetch_ref: string; // JSON
   name: string;
+  /** Canonical output filename (with extension) — what's advertised in the
+   *  indexer listing and the SAB queue/history, and what's actually written
+   *  to disk. Falls back to `name` for rows written before this column existed. */
+  filename: string | null;
   category: string;
   status: string;
   priority: number;
@@ -34,6 +38,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   backend TEXT NOT NULL,
   fetch_ref TEXT NOT NULL,
   name TEXT NOT NULL,
+  filename TEXT,
   category TEXT NOT NULL,
   status TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
@@ -73,22 +78,35 @@ export class Db implements StatsSink {
     this.db = new DatabaseSync(path);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /** Add columns introduced after a db was first created. `CREATE TABLE IF NOT
+   *  EXISTS` above only covers fresh installs. */
+  private migrate(): void {
+    const cols = (this.db.prepare(`PRAGMA table_info(jobs)`).all() as unknown as { name: string }[]).map(
+      (c) => c.name,
+    );
+    if (!cols.includes("filename")) this.db.exec(`ALTER TABLE jobs ADD COLUMN filename TEXT`);
   }
 
   // --- jobs ---
   insertJob(r: JobRow): void {
     this.db
       .prepare(
-        `INSERT INTO jobs (nzo_id,backend,fetch_ref,name,category,status,priority,bytes_total,bytes_done,storage,error,added_at,completed_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO jobs (nzo_id,backend,fetch_ref,name,filename,category,status,priority,bytes_total,bytes_done,storage,error,added_at,completed_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .run(
-        r.nzo_id, r.backend, r.fetch_ref, r.name, r.category, r.status, r.priority,
+        r.nzo_id, r.backend, r.fetch_ref, r.name, r.filename, r.category, r.status, r.priority,
         r.bytes_total, r.bytes_done, r.storage, r.error, r.added_at, r.completed_at,
       );
   }
   updateProgress(id: string, done: number, total: number): void {
     this.db.prepare(`UPDATE jobs SET bytes_done=?, bytes_total=? WHERE nzo_id=?`).run(done, total, id);
+  }
+  setFilename(id: string, filename: string): void {
+    this.db.prepare(`UPDATE jobs SET filename=? WHERE nzo_id=?`).run(filename, id);
   }
   setStatus(id: string, status: string, opts: { error?: string | null; completedAt?: number | null; storage?: string } = {}): void {
     this.db

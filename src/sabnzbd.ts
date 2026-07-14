@@ -1,6 +1,7 @@
 import type { AppConfig } from "./types.js";
 import type { DownloadManager, Job } from "./downloader.js";
 import { decodeToken, encodeToken, type TokenPayload } from "./token.js";
+import { buildFilename } from "./filename.js";
 
 export interface JsonReply {
   status: number;
@@ -62,7 +63,7 @@ function queueReply(ctx: SabCtx, params: URLSearchParams): JsonReply {
     const left = Math.max(0, j.bytesTotal - j.bytesDone);
     return {
       nzo_id: j.nzoId,
-      filename: j.name,
+      filename: j.filename,
       name: j.name,
       cat: j.category,
       status: j.status,
@@ -108,6 +109,7 @@ function historyReply(ctx: SabCtx, params: URLSearchParams): JsonReply {
   const slots = done.map((j) => ({
     nzo_id: j.nzoId,
     name: j.name,
+    filename: j.filename,
     nzb_name: `${j.name}.nzb`,
     category: j.category,
     cat: j.category,
@@ -174,6 +176,7 @@ function startJob(
     backend,
     fetchRef: payload.fetchRef,
     name: payload.title,
+    filename: buildFilename(payload.title, payload.extension),
     category: category || "R_____r",
     sizeBytes: payload.sizeBytes,
   });

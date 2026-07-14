@@ -1,5 +1,6 @@
 import type { AppConfig, BackendAdapter, SearchItem, SearchQuery } from "./types.js";
 import { encodeToken } from "./token.js";
+import { buildFilename } from "./filename.js";
 
 export interface HttpReply {
   status: number;
@@ -62,8 +63,7 @@ function itemXml(item: SearchItem, backend: string, cfg: AppConfig): string {
   );
   const dl = `${cfg.server.baseUrl.replace(/\/$/, "")}/dl/${encodeURIComponent(backend)}/${token}`;
   const size = item.sizeBytes || 0;
-  const fmt = item.extension ? ` [${item.extension.toUpperCase()}]` : "";
-  const displayTitle = `${item.title}${item.author ? ` - ${item.author}` : ""}${fmt}`;
+  const displayTitle = buildFilename(item.title, item.extension);
   const cats = item.categories.length ? item.categories : [7020];
 
   const attrs = [

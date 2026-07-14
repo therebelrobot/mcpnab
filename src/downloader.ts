@@ -12,6 +12,7 @@ export type JobStatus = "Queued" | "Downloading" | "Completed" | "Failed";
 export interface Job {
   nzoId: string;
   name: string;
+  filename: string;
   category: string;
   status: JobStatus;
   priority: number;
@@ -27,6 +28,7 @@ function rowToJob(r: JobRow): Job {
   return {
     nzoId: r.nzo_id,
     name: r.name,
+    filename: r.filename ?? r.name,
     category: r.category,
     status: r.status as JobStatus,
     priority: r.priority,
@@ -73,7 +75,15 @@ export class DownloadManager {
     return r ? rowToJob(r) : undefined;
   }
 
-  add(opts: { backend: string; fetchRef: unknown; name: string; category: string; sizeBytes: number; priority?: number }): Job {
+  add(opts: {
+    backend: string;
+    fetchRef: unknown;
+    name: string;
+    filename?: string;
+    category: string;
+    sizeBytes: number;
+    priority?: number;
+  }): Job {
     const nzoId = `SABnzbd_nzo_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
     const folderName = sanitize(opts.name);
     const row: JobRow = {
@@ -81,6 +91,7 @@ export class DownloadManager {
       backend: opts.backend,
       fetch_ref: JSON.stringify(opts.fetchRef),
       name: folderName,
+      filename: sanitize(opts.filename ?? opts.name),
       category: opts.category,
       status: "Queued",
       priority: opts.priority ?? 0,
@@ -153,7 +164,8 @@ export class DownloadManager {
       const target = await adapter.fetch(JSON.parse(r.fetch_ref));
       if (aborter.signal.aborted) return;
 
-      const filename = sanitize(target.filename ?? r.name);
+      const filename = sanitize(target.filename ?? r.filename ?? r.name);
+      if (filename !== r.filename) this.db.setFilename(id, filename);
       await mkdir(r.storage, { recursive: true });
       const outPath = join(r.storage, filename);
       let total = r.bytes_total || target.sizeBytes || 0;
