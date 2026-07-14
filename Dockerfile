@@ -12,6 +12,11 @@ RUN npm run build && npm prune --omit=dev
 # ---- runtime stage ----
 FROM node:22-bookworm-slim AS runtime
 
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && update-ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 # uv/uvx for Python MCP servers (`uvx <pkg>`); npx ships with the node image.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
