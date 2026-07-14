@@ -16,9 +16,10 @@
     "mock-mcp-text": "node --import tsx examples/mock-textformat-mcp.ts",
     "probe": "node --import tsx scripts/probe-backend.ts",
     "docker:build": "docker build -t ghcr.io/therebelrobot/mcpnab:$npm_package_version -t ghcr.io/therebelrobot/mcpnab:latest .",
+    "docker:build:arm64": "npm run docker:setup && docker buildx build --builder mcpnab-builder --platform linux/arm64 -t ghcr.io/therebelrobot/mcpnab:$npm_package_version -t ghcr.io/therebelrobot/mcpnab:latest --load .",
+    "docker:setup": "docker buildx inspect mcpnab-builder >/dev/null 2>&1 || docker buildx create --name mcpnab-builder --driver docker-container",
     "docker:login": "docker login ghcr.io -u therebelrobot",
-    "docker:push": "docker push ghcr.io/therebelrobot/mcpnab:$npm_package_version && docker push ghcr.io/therebelrobot/mcpnab:latest",
-    "docker:publish": "npm run docker:build && npm run docker:push"
+    "docker:publish": "npm run docker:setup && docker buildx build --builder mcpnab-builder --platform linux/amd64,linux/arm64 -t ghcr.io/therebelrobot/mcpnab:$npm_package_version -t ghcr.io/therebelrobot/mcpnab:latest --push ."
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0"
