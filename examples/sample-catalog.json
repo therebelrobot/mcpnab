@@ -1,0 +1,22 @@
+[
+  {
+    "id": "pg-84",
+    "title": "Frankenstein",
+    "author": "Mary Shelley",
+    "extension": "epub",
+    "sizeBytes": 140,
+    "categories": [7020],
+    "published": "1818-01-01T00:00:00Z",
+    "filePath": "files/frankenstein.epub"
+  },
+  {
+    "id": "pg-2701",
+    "title": "Moby Dick",
+    "author": "Herman Melville",
+    "extension": "epub",
+    "sizeBytes": 271000,
+    "categories": [7020],
+    "published": "1851-01-01T00:00:00Z",
+    "filePath": "files/moby-dick.epub"
+  }
+]

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mcpnab</title>
+<style>
+  :root { --bg:#f4f5f7; --panel:#fff; --head:#2b2b2b; --accent:#f0a30a; --line:#e2e4e8;
+          --ok:#3fae5a; --fail:#d0454c; --muted:#7a828c; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:#222; }
+  header { background:var(--head); color:#fff; display:flex; align-items:center; gap:14px; padding:10px 16px; }
+  header .logo { font-weight:700; letter-spacing:.3px; }
+  header .logo b { color:var(--accent); }
+  header .status { margin-left:auto; font-size:12px; color:#cfd3d8; }
+  nav { background:#3a3a3a; display:flex; gap:2px; padding:0 8px; }
+  nav button { background:transparent; border:0; color:#cfd3d8; padding:10px 16px; cursor:pointer; font-size:13px; border-bottom:3px solid transparent; }
+  nav button.active { color:#fff; border-bottom-color:var(--accent); }
+  main { padding:16px; max-width:1200px; margin:0 auto; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin-bottom:16px; }
+  .panel h2 { margin:0; padding:10px 14px; font-size:13px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); border-bottom:1px solid var(--line); background:#fafbfc; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
+  tr:last-child td { border-bottom:0; }
+  .bar { background:#eceef1; border-radius:10px; height:16px; width:100%; position:relative; overflow:hidden; min-width:120px; }
+  .bar > i { display:block; height:100%; background:var(--accent); }
+  .bar > span { position:absolute; inset:0; text-align:center; font-size:11px; line-height:16px; color:#333; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+  .pill.Completed { background:#e6f4ea; color:var(--ok); }
+  .pill.Failed { background:#fbe7e8; color:var(--fail); }
+  .pill.Downloading { background:#fff3d6; color:#a9720a; }
+  .pill.Queued { background:#eceef1; color:#555; }
+  button.act { border:1px solid var(--line); background:#fff; border-radius:4px; padding:3px 8px; cursor:pointer; font-size:12px; }
+  button.act:hover { background:#f0f1f3; }
+  button.act.danger:hover { background:#fbe7e8; color:var(--fail); border-color:#f2c6c9; }
+  .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
+  .prio { display:flex; align-items:center; gap:4px; }
+  .prio b { width:22px; text-align:center; }
+  .muted { color:var(--muted); }
+  .path { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:#555; word-break:break-all; }
+  .empty { padding:22px 14px; color:var(--muted); text-align:center; }
+  .cfg-grid { display:grid; grid-template-columns:180px 1fr; gap:8px 14px; padding:14px; align-items:center; }
+  .cfg-grid .k { color:var(--muted); }
+  code.tok { background:#f0f1f3; padding:2px 6px; border-radius:4px; font-family:ui-monospace,monospace; }
+  textarea { width:100%; min-height:300px; font-family:ui-monospace,monospace; font-size:12px; padding:10px; border:1px solid var(--line); border-radius:4px; }
+  .btnbar { display:flex; gap:8px; padding:0 14px 14px; flex-wrap:wrap; }
+  .btn { background:var(--accent); color:#211a08; border:0; border-radius:4px; padding:7px 14px; font-weight:600; cursor:pointer; }
+  .btn.sec { background:#e7e9ec; color:#333; }
+  input.txt { border:1px solid var(--line); border-radius:4px; padding:6px 8px; font-size:13px; }
+  .note { font-size:12px; color:var(--muted); padding:0 14px 12px; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">mcpnab</span>
+  <span class="status" id="status">connecting…</span>
+</header>
+<nav>
+  <button data-tab="queue" class="active">Queue</button>
+  <button data-tab="history">History</button>
+  <button data-tab="mcp">MCP</button>
+  <button data-tab="config">Config</button>
+</nav>
+<main>
+  <section id="tab-queue"></section>
+  <section id="tab-history" class="hidden"></section>
+  <section id="tab-mcp" class="hidden"></section>
+  <section id="tab-config" class="hidden"></section>
+</main>
+
+<script>
+const KEY = "mcpnab_key";
+function apiKey(){ return localStorage.getItem(KEY) || ""; }
+async function api(path, method="GET", body){
+  const headers = { "content-type":"application/json" };
+  if (apiKey()) headers["x-api-key"] = apiKey();
+  const res = await fetch(path, { method, headers, body: body?JSON.stringify(body):undefined });
+  if (res.status === 401){ promptKey(); throw new Error("unauthorized"); }
+  return res.json();
+}
+function promptKey(){
+  const k = prompt("This mcpnab is protected. Enter its API key:");
+  if (k!==null){ localStorage.setItem(KEY,k); refresh(); }
+}
+function fmtBytes(b){ if(!b) return "0 B"; const u=["B","KB","MB","GB"]; let i=0,n=b; while(n>=1000&&i<3){n/=1000;i++;} return n.toFixed(i?1:0)+" "+u[i]; }
+function fmtTime(ts){ return ts? new Date(ts).toLocaleString() : "—"; }
+function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+let current = "queue";
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  current=b.dataset.tab;
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x===b));
+  document.querySelectorAll("main section").forEach(s=>s.classList.add("hidden"));
+  document.getElementById("tab-"+current).classList.remove("hidden");
+  refresh();
+});
+
+function renderQueue(d){
+  const rows = d.queue.map(j=>`
+    <tr>
+      <td><div class="prio">
+        <button class="act" onclick="prio('${j.nzoId}',1)">▲</button>
+        <b>${j.priority}</b>
+        <button class="act" onclick="prio('${j.nzoId}',-1)">▼</button>
+      </div></td>
+      <td>${esc(j.name)}</td>
+      <td class="muted">${esc(j.category)}</td>
+      <td><div class="bar"><i style="width:${j.percentage}%"></i><span>${j.percentage}%</span></div></td>
+      <td>${fmtBytes(j.bytesTotal)}</td>
+      <td><span class="pill ${j.status}">${j.status}</span></td>
+      <td><div class="row-actions">
+        <button class="act danger" onclick="cancel('${j.nzoId}')">Cancel</button>
+      </div></td>
+    </tr>`).join("");
+  return `<div class="panel"><h2>Queue — ${d.queue.length} item(s), ${d.maxConcurrent} concurrent</h2>
+    <table><thead><tr><th>Priority</th><th>Name</th><th>Cat</th><th>Progress</th><th>Size</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7" class="empty">Queue is empty.</td></tr>`}</tbody></table></div>`;
+}
+
+function renderHistory(d){
+  const rows = d.history.map(j=>`
+    <tr>
+      <td>${esc(j.name)}</td>
+      <td class="muted">${esc(j.category)}</td>
+      <td><span class="pill ${j.status}">${j.status}</span>${j.error?` <span class="muted">(${esc(j.error)})</span>`:""}</td>
+      <td>${fmtBytes(j.bytes)}</td>
+      <td class="path">${esc(j.storage)}</td>
+      <td class="muted">${fmtTime(j.completedAt)}</td>
+      <td><div class="row-actions">
+        ${j.status==="Failed"?`<button class="act" onclick="retry('${j.nzoId}')">Retry</button>`:""}
+        <button class="act danger" onclick="remove('${j.nzoId}',false)">Delete</button>
+        <button class="act danger" onclick="remove('${j.nzoId}',true)">Delete+files</button>
+      </div></td>
+    </tr>`).join("");
+  return `<div class="panel"><h2>History — ${d.history.length} item(s)</h2>
+    <table><thead><tr><th>Name</th><th>Cat</th><th>Status</th><th>Size</th><th>Storage</th><th>Completed</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7" class="empty">No history yet.</td></tr>`}</tbody></table></div>`;
+}
+
+function renderMcp(d){
+  const rows = d.stats.map(s=>`
+    <tr>
+      <td>${esc(s.backend)}</td>
+      <td>${esc(s.tool)}</td>
+      <td>${s.calls}</td>
+      <td class="${s.errors?"":"muted"}">${s.errors}</td>
+      <td>${s.avgMs} ms</td>
+      <td class="muted">${fmtTime(s.lastTs)}</td>
+      <td class="muted">${esc(s.lastError||"")}</td>
+    </tr>`).join("");
+  const backends = d.backends.map(b=>`<span class="pill Queued">${esc(b.name)} · ${esc(b.type)}</span>`).join(" ");
+  return `<div class="panel"><h2>Backends</h2><div style="padding:12px 14px">${backends||`<span class="muted">none</span>`}</div></div>
+    <div class="panel"><h2>MCP tool usage</h2>
+    <table><thead><tr><th>Backend</th><th>Tool</th><th>Calls</th><th>Errors</th><th>Avg</th><th>Last used</th><th>Last error</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7" class="empty">No MCP calls recorded yet.</td></tr>`}</tbody></table></div>`;
+}
+
+async function renderConfig(){
+  const c = await api("/api/ui/config");
+  document.getElementById("tab-config").innerHTML = `
+    <div class="panel"><h2>Server</h2><div class="cfg-grid">
+      <div class="k">Listen</div><div>${esc(c.server.host)}:${c.server.port}</div>
+      <div class="k">Public base URL</div><div class="path">${esc(c.server.baseUrl)}</div>
+      <div class="k">Download dir</div><div class="path">${esc(c.downloadDir)}</div>
+      <div class="k">Data dir</div><div class="path">${esc(c.dataDir)}</div>
+    </div></div>
+    <div class="panel"><h2>Security</h2><div class="cfg-grid">
+      <div class="k">Download token</div>
+      <div>${c.tokenSecretSet?`<code class="tok">${esc(c.tokenSecretPreview)}</code> signed`:`<span class="muted">unsigned</span>`}</div>
+      <div class="k">API key</div>
+      <div>${c.apiKeySet?`<span class="pill Completed">set</span>`:`<span class="muted">not set</span>`}</div>
+    </div>
+    <div class="btnbar">
+      <button class="btn" onclick="cycleToken()">Cycle token secret</button>
+      <button class="btn sec" onclick="clearToken()">Clear (unsign)</button>
+      <input class="txt" id="apikeyInput" placeholder="new API key (blank = clear)"/>
+      <button class="btn sec" onclick="setApiKey()">Set API key</button>
+    </div>
+    <div class="note">Cycling the token secret immediately invalidates every download link already handed to your __r apps.</div>
+    </div>
+    <div class="panel"><h2>Raw config (edit &amp; save to disk)</h2>
+      <div style="padding:14px"><textarea id="rawcfg">${esc(JSON.stringify(c.backends, null, 2))}</textarea></div>
+      <div class="note">This shows the <b>backends</b> array. Full edits are written to the config file; backend changes require a restart to take effect.</div>
+    </div>`;
+}
+
+window.prio = async (id,delta)=>{ await api(`/api/ui/job/${encodeURIComponent(id)}/priority`,"POST",{delta}); refresh(); };
+window.cancel = async (id)=>{ await api(`/api/ui/job/${encodeURIComponent(id)}/cancel`,"POST"); refresh(); };
+window.retry = async (id)=>{ await api(`/api/ui/job/${encodeURIComponent(id)}/retry`,"POST"); refresh(); };
+window.remove = async (id,deleteFiles)=>{ if(deleteFiles && !confirm("Delete downloaded files too?"))return; await api(`/api/ui/job/${encodeURIComponent(id)}/remove`,"POST",{deleteFiles}); refresh(); };
+window.cycleToken = async ()=>{ const r=await api("/api/ui/token/cycle","POST"); alert("New token secret: "+r.tokenSecretPreview+"\n"+r.note); renderConfig(); };
+window.clearToken = async ()=>{ await api("/api/ui/token/clear","POST"); renderConfig(); };
+window.setApiKey = async ()=>{ const v=document.getElementById("apikeyInput").value; await api("/api/ui/apikey","POST",{apiKey:v}); if(v) localStorage.setItem(KEY,v); alert("API key updated."); renderConfig(); };
+
+async function refresh(){
+  try {
+    if (current==="config"){ await renderConfig(); document.getElementById("status").textContent="ready"; return; }
+    const d = await api("/api/ui/overview");
+    document.getElementById("status").textContent =
+      `${d.queue.length} active · ${d.history.length} done · ${d.backends.length} backend(s)`;
+    if (current==="queue") document.getElementById("tab-queue").innerHTML = renderQueue(d);
+    if (current==="history") document.getElementById("tab-history").innerHTML = renderHistory(d);
+    if (current==="mcp") document.getElementById("tab-mcp").innerHTML = renderMcp(d);
+  } catch(e){ document.getElementById("status").textContent = "error: "+e.message; }
+}
+refresh();
+setInterval(()=>{ if(current!=="config") refresh(); }, 2000);
+</script>
+</body>
+</html>

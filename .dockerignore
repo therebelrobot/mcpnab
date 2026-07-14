@@ -1,0 +1,8 @@
+node_modules
+dist
+downloads
+logs
+.git
+*.log
+probe*.mjs
+config.test.json

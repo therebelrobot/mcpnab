@@ -1,0 +1,151 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "baseUrl": "http://localhost:8080"
+  },
+  "downloadDir": "./downloads",
+  "apiKey": "change-me-or-remove-to-disable",
+  "tokenSecret": "optional-hmac-secret-for-download-links",
+  "backends": [
+    {
+      "name": "gutenberg-local",
+      "type": "static",
+      "catalog": "./examples/sample-catalog.json"
+    },
+    {
+      "name": "gutenberg",
+      "type": "mcp",
+      "mcp": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "your-gutenberg-mcp-server"
+        ],
+        "env": {}
+      },
+      "search": {
+        "tool": "search_books",
+        "args": {
+          "query": "{q}",
+          "limit": "{limit}"
+        },
+        "resultPath": "results",
+        "map": {
+          "id": "id",
+          "title": "title",
+          "author": "authors.0",
+          "sizeBytes": "size",
+          "extension": "format",
+          "published": "year"
+        },
+        "categories": [
+          7020
+        ]
+      },
+      "fetch": {
+        "tool": "get_download_link",
+        "args": {
+          "id": "{id}"
+        },
+        "filePathPath": "download.path",
+        "urlPath": "download.url",
+        "filenamePath": "download.filename"
+      }
+    },
+    {
+      "name": "text-based-source",
+      "type": "mcp",
+      "mcp": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": [
+          "-y",
+          "your-text-based-mcp-server"
+        ],
+        "env": {}
+      },
+      "search": {
+        "tool": "book_search",
+        "args": {
+          "query": "{q}"
+        },
+        "textFormat": {
+          "fields": {
+            "title": "Title: (.*)",
+            "author": "Authors: (.*)",
+            "sizeBytes": "Size: (.*)",
+            "extension": "Format: (.*)",
+            "id": "Hash: (.*)"
+          }
+        },
+        "map": {
+          "id": "id",
+          "title": "title",
+          "author": "author",
+          "sizeBytes": "sizeBytes",
+          "extension": "extension"
+        },
+        "categories": [
+          7020
+        ]
+      },
+      "fetch": {
+        "tool": "get_download_link",
+        "args": {
+          "id": "{id}",
+          "format": "{extension}"
+        },
+        "textFormat": {
+          "fields": {
+            "basePath": "successful: (.*)"
+          }
+        },
+        "map": {
+          "filePath": "{basePath}/{id}.{extension}",
+          "filename": "{id}.{extension}"
+        },
+        "deleteSourceAfterCopy": true
+      }
+    },
+    {
+      "name": "archive-org",
+      "type": "mcp",
+      "mcp": {
+        "transport": "http",
+        "url": "http://localhost:9001/mcp",
+        "headers": {
+          "authorization": "Bearer ..."
+        }
+      },
+      "search": {
+        "tool": "search",
+        "args": {
+          "q": "{q}",
+          "mediatype": "texts",
+          "rows": "{limit}"
+        },
+        "resultPath": "docs",
+        "map": {
+          "id": "identifier",
+          "title": "title",
+          "author": "creator",
+          "sizeBytes": "item_size",
+          "extension": "format"
+        },
+        "categories": [
+          7020
+        ]
+      },
+      "fetch": {
+        "tool": "get_files",
+        "args": {
+          "identifier": "{id}"
+        },
+        "urlPath": "best.url",
+        "filenamePath": "best.name"
+      }
+    }
+  ]
+}

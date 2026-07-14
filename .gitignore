@@ -1,0 +1,13 @@
+node_modules/
+dist/
+downloads/
+logs/
+data/
+mcpnab-data/
+*.db
+*.db-*
+config.json
+data-*/
+dl-*/
+.DS_Store
+.claude/

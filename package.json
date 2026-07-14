@@ -1,0 +1,31 @@
+{
+  "name": "mcpnab",
+  "version": "0.1.0",
+  "description": "A Newznab + SABnzbd-compatible API shim that puts any MCP server behind the __r stack.",
+  "license": "Unlicense",
+  "type": "module",
+  "bin": {
+    "mcpnab": "dist/src/index.js"
+  },
+  "scripts": {
+    "build": "tsc && cp src/ui.html dist/src/ui.html",
+    "start": "node dist/src/index.js",
+    "dev": "node --import tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "mock-mcp": "node --import tsx examples/mock-gutenberg-mcp.ts",
+    "mock-mcp-text": "node --import tsx examples/mock-textformat-mcp.ts",
+    "probe": "node --import tsx scripts/probe-backend.ts",
+    "docker:build": "docker build -t ghcr.io/therebelrobot/mcpnab:$npm_package_version -t ghcr.io/therebelrobot/mcpnab:latest .",
+    "docker:login": "docker login ghcr.io -u therebelrobot",
+    "docker:push": "docker push ghcr.io/therebelrobot/mcpnab:$npm_package_version && docker push ghcr.io/therebelrobot/mcpnab:latest",
+    "docker:publish": "npm run docker:build && npm run docker:push"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}

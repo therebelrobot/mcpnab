@@ -1,0 +1,69 @@
+{
+  "server": { "host": "127.0.0.1", "port": 8088, "baseUrl": "http://127.0.0.1:8088" },
+  "downloadDir": "./downloads",
+  "tokenSecret": "test-secret",
+  "backends": [
+    {
+      "name": "static-local",
+      "type": "static",
+      "catalog": "./examples/sample-catalog.json"
+    },
+    {
+      "name": "mock-mcp",
+      "type": "mcp",
+      "mcp": {
+        "transport": "stdio",
+        "command": "node",
+        "args": ["--import", "tsx", "examples/mock-gutenberg-mcp.ts"],
+        "env": {}
+      },
+      "search": {
+        "tool": "search_books",
+        "args": { "query": "{q}", "limit": "{limit}" },
+        "resultPath": "results",
+        "map": { "id": "id", "title": "title", "author": "authors.0", "sizeBytes": "size", "extension": "format", "published": "year" },
+        "categories": [7020]
+      },
+      "fetch": {
+        "tool": "get_download_link",
+        "args": { "id": "{id}" },
+        "filePathPath": "download.path",
+        "filenamePath": "download.filename"
+      }
+    },
+    {
+      "name": "mock-mcp-text",
+      "type": "mcp",
+      "mcp": {
+        "transport": "stdio",
+        "command": "node",
+        "args": ["--import", "tsx", "examples/mock-textformat-mcp.ts"],
+        "env": {}
+      },
+      "search": {
+        "tool": "book_search",
+        "args": { "query": "{q}" },
+        "textFormat": {
+          "fields": {
+            "title": "Title: (.*)",
+            "author": "Authors: (.*)",
+            "extension": "Format: (.*)",
+            "sizeBytes": "Size: (.*)",
+            "id": "Hash: (.*)"
+          }
+        },
+        "map": { "id": "id", "title": "title", "author": "author", "sizeBytes": "sizeBytes", "extension": "extension" },
+        "categories": [7020]
+      },
+      "fetch": {
+        "tool": "get_download_link",
+        "args": { "id": "{id}" },
+        "textFormat": {
+          "fields": { "filePath": "Path: (.*)", "filename": "Filename: (.*)" }
+        },
+        "filePathPath": "filePath",
+        "filenamePath": "filename"
+      }
+    }
+  ]
+}

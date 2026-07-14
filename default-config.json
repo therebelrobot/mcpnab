@@ -1,0 +1,17 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "baseUrl": "http://mcpnab:8080"
+  },
+  "downloadDir": "/downloads",
+  "dataDir": "/app/data",
+  "maxConcurrentDownloads": 2,
+  "backends": [
+    {
+      "name": "gutenberg-local",
+      "type": "static",
+      "catalog": "/app/examples/sample-catalog.json"
+    }
+  ]
+}

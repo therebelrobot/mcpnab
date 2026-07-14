@@ -1,0 +1,10 @@
+services:
+  mcpnab:
+    build: .
+    image: mcpnab:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data            # config.json, mcpnab.db, npm/uv caches (persistent)
+      - ./downloads:/downloads      # share this with R_____r at the SAME path
+    restart: unless-stopped
