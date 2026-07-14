@@ -62,7 +62,8 @@ function itemXml(item: SearchItem, backend: string, cfg: AppConfig): string {
   );
   const dl = `${cfg.server.baseUrl.replace(/\/$/, "")}/dl/${encodeURIComponent(backend)}/${token}`;
   const size = item.sizeBytes || 0;
-  const displayTitle = item.author ? `${item.title} - ${item.author}` : item.title;
+  const fmt = item.extension ? ` [${item.extension.toUpperCase()}]` : "";
+  const displayTitle = `${item.title}${item.author ? ` - ${item.author}` : ""}${fmt}`;
   const cats = item.categories.length ? item.categories : [7020];
 
   const attrs = [
